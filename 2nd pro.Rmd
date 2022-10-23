@@ -1,0 +1,116 @@
+---
+title: "education"
+output: html_document
+date: '2022-05-31'
+---
+
+About Dataset:  This dataset contains 3.682 records of courses from 4 subjects (Business Finance, Graphic Design, Musical Instruments and Web Design) taken from Udemy.
+
+```{r setup, include=FALSE}
+education= read.csv(file.choose(),header = TRUE)
+View(education)
+attach(education)
+attach(education)
+library(tidytext)
+library(tidyr)
+library(dplyr)
+library(stopwords)
+library(igraph)
+library(ggraph)
+library(wordcloud2)
+```
+
+#The head() function in R is used to display the first n rows present in the input data frame. Here I have choosen 50 rows so 50 rows have been displayed
+
+```{r}
+head(education,50)
+str(education)
+summary(education)
+```
+
+
+```{r}
+str(education)
+```
+
+Text Preprocessing
+
+Tokenization
+
+```{r}
+data_tokens = unnest_tokens(education, word,subject)
+head(data_tokens,20)
+
+```
+Stop Words
+
+     Stopwords are certain words that are present in high proportion but rarely contribute anything of sense towards serving analytical purpose. These include words such as "a","the","if" etc words are removed.
+     
+```{r}
+token_stop=education_tokens %>% filter(!word %in% stop_words$word)
+
+head(token_stop,100)
+```
+
+N-grams
+
+     I have used unnest_tokens function to tokenize by word which is useful for the frequency analyses, the ngrams function to use tokenize into consecutive sequences of words like bigram,trigram etc., I have use bigram function and separated sequence of words.
+     
+```{r}
+ng = education %>% unnest_tokens(word,course_title, token = "ngrams", n=2)%>%
+  separate(word, c("word1","word2"),sep = " ") %>% filter(!word1 %in% stop_words$word)%>%
+  filter(!word2 %in% stop_words$word)%>% unite(word, word1,word2,sep=" ")%>%
+  count(word, sort =TRUE)
+head(ng,20)
+```
+
+#Seperate
+
+     After ngrams,separate bigram words like word1 and word2 which is helpful to use the igraph represention
+
+```{r}
+s= ng %>%separate(word,c("word1","word2"),sep = " ")
+x=head(s %>% filter(n>=2))
+x
+```
+
+#Igraph
+
+```{r}
+i=x %>% count(word1,word2,directed=TRUE) %>% graph_from_data_frame()
+i
+```
+
+#GG graph
+
+    GGgraph to find the link words of root word in graphical represention, it is more useful to find the root word and related words.
+    
+```{r}
+
+set.seed(20181005)
+a=arrow(angle=20,length=unit(0.1,"inches"),ends="last",type="open")
+
+ggraph(i,layout="fr")+geom_edge_link(aes(color=n,width=n),arrow=a)+
+  geom_node_point()+ geom_node_text(aes(label=name),vjust=1,hjust=1)
+
+```
+
+#Word frequency
+
+     I have to find the frequency words in this dataset, the count operation is heplful to find the which word is more frequnecy in this.
+     
+```{r}
+w = token_stop %>% count(word,sort = TRUE)
+head(w)
+```
+
+#word_cloud
+
+      Word Cloud provides an excellent option to analyze the text data through visualization in the form of tags, or words, where the importance of a word is explained by its frequency.
+      
+```{r}
+wordcloud2(data = w, size=0.4, color = "random-light",minRotation = -pi/6,backgroundColor=rainbow(2), maxRotation = -pi/6, rotateRatio = 1,shape="circle")
+wordcloud2(data=w,size=1.6,color='random-dark')
+```
+```
+
